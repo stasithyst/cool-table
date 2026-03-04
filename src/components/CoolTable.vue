@@ -429,7 +429,7 @@ const columns = [
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-  transform: translateY(-3px);
+  transform: translateY(-4px);
 }
 
 .fade-enter-to,
