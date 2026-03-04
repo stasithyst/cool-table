@@ -1,11 +1,11 @@
-<script setup>
-import CoolTable from "@/components/coolTable.vue";
+<script setup lang="ts">
+import CoolTable from "@/components/CoolTable.vue";
 </script>
 
 <template>
   <header>
     <div class="wrapper">
-      <cool-table />
+      <CoolTable />
     </div>
   </header>
 </template>
