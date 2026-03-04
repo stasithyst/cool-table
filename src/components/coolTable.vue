@@ -16,31 +16,36 @@
         v-if="showFilter"
         v-model:value="filters.firstName"
         placeholder="First Name"
+        style="width: 140px"
     />
 
     <AInput
         v-if="showFilter"
         v-model:value="filters.lastName"
         placeholder="Last Name"
+        style="width: 140px"
     />
 
     <AInput
         v-if="showFilter"
         v-model:value="filters.age"
         placeholder="Age"
+        style="width: 140px"
     />
 
     <AInput
         v-if="showFilter"
         v-model:value="filters.address"
         placeholder="Address"
+        style="width: 140px"
     />
 
     <ASelect
         v-if="showFilter"
         v-model:value="filters.role"
+        allow-clear
         placeholder="Role"
-        style="width: 120px"
+        style="width: 140px"
     >
       <ASelectOption value="admin">Admin</ASelectOption>
       <ASelectOption value="moderator">Moderator</ASelectOption>
@@ -93,7 +98,6 @@ import { onMounted, reactive, ref, computed } from "vue";
 export default {
   components: { ATable, ATag, AButton, AInputSearch, AFlex, ASelect, AInput },
   setup() {
-    const dataSource = ref([])
     const loading = ref(false)
     const error = ref(null)
 
@@ -103,12 +107,11 @@ export default {
 
     const filters = reactive({
       search: '',
-      field: '',
       address: '',
       firstName: '',
       lastName: '',
       age: '',
-      role: '',
+      role: undefined,
     })
 
     const fetchData = async () => {
@@ -133,19 +136,13 @@ export default {
     }
 
     const filteredData = computed(() => {
-      return dataTable.value.filter(user => {
-
+      return dataTable.value.filter((user) => {
         if (filters.search) {
-          const value = filters.search.toLowerCase()
-
-          const allMatch =
-              user.firstName.toLowerCase().includes(value) ||
-              user.lastName.toLowerCase().includes(value) ||
-              String(user.age).includes(value) ||
-              user.role?.toLowerCase().includes(value) ||
-              user.address?.toLowerCase().includes(value)
-
-          if (!allMatch) return false
+          const searchValue = filters.search.toLowerCase()
+          const userData = JSON.stringify(user).toLowerCase()
+          if (!userData.includes(searchValue)) {
+            return false
+          }
         }
 
         if (filters.firstName && !user.firstName.toLowerCase().includes(filters.firstName.toLowerCase())) {
@@ -160,8 +157,11 @@ export default {
           return false
         }
 
-        if (filters.address && !user.address.toLowerCase().includes(filters.address.toLowerCase())) {
-          return false
+        if (filters.address) {
+          const place = JSON.stringify(user.address).toLowerCase()
+          if (!place.includes(filters.address.toLowerCase())) {
+            return false
+          }
         }
 
         return !(filters.role && user.role !== filters.role);
@@ -205,7 +205,6 @@ export default {
     ]
 
     return {
-      dataSource,
       loading,
       error,
       fetchData,
@@ -225,5 +224,11 @@ export default {
 
 .head {
   gap: 1rem;
+}
+
+:deep(.ant-select-selector) {
+  display: flex;
+  align-items: center;
+  height: 40px !important;
 }
 </style>
