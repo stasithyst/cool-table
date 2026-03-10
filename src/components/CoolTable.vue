@@ -52,42 +52,75 @@
         </AFlex>
       </transition>
     </AFlex>
+    <AButton @click="openModal"> Complete Data </AButton>
+    <AModal v-model:open="open" :style="{ width: '800px' }">
+      <ACard
+        v-for="users in dataTable"
+        :key="users.id"
+        :title="`${users.firstName + ' ' + users.lastName}`"
+        :style="{ marginTop: '32px' }"
+      >
+        <AFlex v-for="(value, key) in users" :key="key">
+          <p>{{ key }}: {{ value }}</p>
+        </AFlex>
+      </ACard>
+    </AModal>
   </AFlex>
   <ATable
     size="small"
     rowKey="id"
     :dataSource="filteredData"
     :columns="columns"
+    @resizeColumn="handleResizeColumn"
     :loading="loading"
     :error="error"
-    :scroll="{ x: 'max-content', y: 800 }"
+    :scroll="{ x: 'max-content' }"
     class="table"
   >
+    <template #headerCell="{ column }">
+      <div
+        draggable="true"
+        class="table-header"
+        @dragstart="onDragStart(column)"
+        @dragover.prevent
+        @drop="onDropList(column)"
+      >
+        {{ column.title }}
+        <ACheckbox v-model:checked="column.visible" @click.stop></ACheckbox>
+      </div>
+    </template>
     <template #bodyCell="{ column, record }">
-      <template v-if="column.key === 'image'">
-        <img
-          :src="record.image"
-          style="width: 50px; height: 50px; object-fit: cover"
-          alt="avatar"
-        />
-      </template>
-      <template v-if="column.key === 'role'">
-        <span>
-          <ATag
-            :key="record.role"
-            :color="record.role === 'admin' ? 'pink' : 'green'"
-          >
-            {{ record.role }}
-          </ATag>
-        </span>
-      </template>
+      <div :class="{ disabled: column.visible === false }">
+        <template v-if="column.key === 'image'">
+          <img
+            :src="record.image"
+            style="width: 50px; height: 50px; object-fit: cover"
+            alt="avatar"
+          />
+        </template>
+        <template v-else-if="column.key === 'role'">
+          <span>
+            <ATag
+              :key="record.role"
+              :color="record.role === 'admin' ? 'pink' : 'green'"
+            >
+              {{ record.role }}
+            </ATag>
+          </span>
+        </template>
+        <template v-else>
+          {{ record[column.key] }}
+        </template>
+      </div>
     </template>
   </ATable>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, computed } from "vue";
+import { onMounted, reactive, ref, watch, computed } from "vue";
 import { CloseOutlined } from "@ant-design/icons-vue";
+const open = ref(false);
+
 const loading = ref(false);
 const error = ref(null);
 
@@ -175,210 +208,317 @@ const resetFilters = () => {
   filters.role = undefined;
 };
 
-const columns = [
+const columns = ref([
   {
     title: "ID",
     dataIndex: "id",
     key: "id",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.id - b.id,
   },
   {
     title: "First Name",
     dataIndex: "firstName",
     key: "firstName",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.firstName.localeCompare(b.firstName),
   },
   {
     title: "Last Name",
     dataIndex: "lastName",
     key: "lastName",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.lastName.localeCompare(b.lastName),
   },
   {
     title: "Maiden Name",
     dataIndex: "maidenName",
     key: "maidenName",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.maidenName.localeCompare(b.maidenName),
   },
   {
     title: "Age",
     dataIndex: "age",
     key: "age",
-    width: 60,
+    resizable: true,
+    minWidth: 60,
+    visible: true,
     sorter: (a, b) => a.age - b.age,
   },
   {
     title: "Gender",
     dataIndex: "gender",
     key: "gender",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.gender.localeCompare(b.gender),
   },
   {
     title: "Email",
     dataIndex: "email",
     key: "email",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.email.localeCompare(b.email),
   },
   {
     title: "Phone",
     dataIndex: "phone",
     key: "phone",
-    width: 150,
+    resizable: true,
+    minWidth: 150,
+    visible: true,
     sorter: (a, b) => a.phone.localeCompare(b.phone),
   },
   {
     title: "Username",
     dataIndex: "username",
     key: "username",
-    width: 60,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.username.localeCompare(b.username),
   },
   {
     title: "Password",
     dataIndex: "password",
     key: "password",
-    width: 80,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.password.localeCompare(b.password),
   },
   {
     title: "Birth Date",
     dataIndex: "birthDate",
     key: "birthDate",
-    width: 100,
+    resizable: true,
+    minWidth: 100,
+    visible: true,
     sorter: (a, b) => a.birthDate.localeCompare(b.birthDate),
   },
   {
     title: "Image",
     dataIndex: "image",
+    resizable: true,
     key: "image",
-    width: 80,
+    visible: true,
+    minWidth: 80,
   },
   {
     title: "Blood Group",
     dataIndex: "bloodGroup",
     key: "bloodGroup",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.bloodGroup.localeCompare(b.bloodGroup),
   },
   {
     title: "Height",
     dataIndex: "height",
     key: "height",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.height - b.height,
   },
   {
     title: "Weight",
     dataIndex: "weight",
     key: "weight",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.weight - b.weight,
   },
   {
     title: "Eye Color",
     dataIndex: "eyeColor",
     key: "eyeColor",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.eyeColor.localeCompare(b.eyeColor),
   },
   {
     title: "Hair Color",
     dataIndex: ["hair", "color"],
     key: "hair.color",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.hair.color.localeCompare(b.hair.color),
   },
   {
     title: "Hair Type",
     dataIndex: ["hair", "type"],
     key: "hair.type",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.hair.type.localeCompare(b.hair.type),
   },
   {
     title: "IP",
     dataIndex: "ip",
     key: "ip",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.ip.localeCompare(b.ip),
   },
   {
     title: "Address",
     dataIndex: ["address", "address"],
     key: "address.address",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.address.address.localeCompare(b.address.address),
   },
   {
     title: "City",
     dataIndex: ["address", "city"],
     key: "address.city",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.address.city.localeCompare(b.address.city),
   },
   {
     title: "State",
     dataIndex: ["address", "state"],
     key: "address.state",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.address.state.localeCompare(b.address.state),
   },
   {
     title: "Postal Code",
     dataIndex: ["address", "postalCode"],
     key: "address.postalCode",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.address.postalCode.localeCompare(b.address.postalCode),
   },
   {
     title: "Country",
     dataIndex: ["address", "country"],
     key: "address.country",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.address.country.localeCompare(b.address.country),
   },
   {
     title: "University",
     dataIndex: "university",
     key: "university",
-    width: 100,
+    resizable: true,
+    minWidth: 100,
+    visible: true,
     sorter: (a, b) => a.university.localeCompare(b.university),
   },
   {
     title: "Company Name",
     dataIndex: ["company", "name"],
     key: "company.name",
-    width: 100,
+    resizable: true,
+    minWidth: 100,
+    visible: true,
     sorter: (a, b) => a.company.name.localeCompare(b.company.name),
   },
   {
     title: "Company Department",
     dataIndex: ["company", "department"],
     key: "company.department",
-    width: 80,
+    resizable: true,
+    minWidth: 80,
+    visible: true,
     sorter: (a, b) => a.company.department.localeCompare(b.company.department),
   },
   {
     title: "Company Title",
     dataIndex: ["company", "title"],
     key: "company.title",
+    resizable: true,
     width: 100,
+    visible: true,
     sorter: (a, b) => a.company.title.localeCompare(b.company.title),
   },
   {
     title: "Role",
     dataIndex: "role",
     key: "role",
+    resizable: true,
     width: 80,
+    visible: true,
     sorter: (a, b) => a.role.localeCompare(b.role),
   },
-];
+]);
+
+function handleResizeColumn(w, col) {
+  col.width = w;
+}
+
+const dragItem = ref(null);
+
+function onDragStart(col: any) {
+  dragItem.value = col;
+}
+
+function onDropList(targetCol: any) {
+  if (!dragItem.value) return;
+
+  const firstIndex = columns.value.findIndex(
+    (t) => t.key === dragItem.value.key,
+  );
+
+  const secondIndex = columns.value.findIndex((t) => t.key === targetCol.key);
+
+  if (firstIndex === -1 || secondIndex === -1) {
+    return;
+  }
+
+  const moved = columns.value.splice(firstIndex, 1)[0];
+  columns.value.splice(secondIndex, 0, moved);
+
+  dragItem.value = null;
+}
+
+function openModal() {
+  if (!open.value) {
+    open.value = true;
+  }
+}
+
+watch(
+  columns,
+  (val) => {
+    localStorage.setItem("table", JSON.stringify(val));
+  },
+  { deep: true },
+);
+
+onMounted(() => {
+  const saved = localStorage.getItem("table");
+  if (saved) {
+    columns.value = JSON.parse(saved);
+  }
+});
 </script>
 
 <style scoped lang="scss">
@@ -391,6 +531,12 @@ const columns = [
   display: flex;
   justify-content: space-between;
   gap: 1rem;
+  align-items: center;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
 }
 
@@ -441,5 +587,9 @@ const columns = [
 .wrapper {
   display: flex;
   gap: 1rem;
+}
+
+.disabled {
+  opacity: 0.35;
 }
 </style>
