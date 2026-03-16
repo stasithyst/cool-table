@@ -9,6 +9,7 @@
       />
       <AButton size="large" @click="showFilter = !showFilter"> Filter </AButton>
     </AFlex>
+
     <AFlex class="head-filter-block">
       <transition name="fade">
         <AFlex class="wrapper" v-if="showFilter">
@@ -52,7 +53,14 @@
         </AFlex>
       </transition>
     </AFlex>
-    <AButton @click="openModal"> Complete Data </AButton>
+
+    <AFlex class="head-button-block">
+      <AButton @click="editMode = !editMode">
+        {{ editMode ? "Save" : "Edit" }}
+      </AButton>
+      <AButton @click="open = !open"> Complete Data </AButton>
+    </AFlex>
+
     <AModal v-model:open="open" :style="{ width: '800px' }">
       <ACard
         v-for="users in dataTable"
@@ -60,37 +68,62 @@
         :title="`${users.firstName + ' ' + users.lastName}`"
         :style="{ marginTop: '32px' }"
       >
-        <AFlex v-for="(value, key) in users" :key="key">
+        <AFlex v-for="(value, key) in flatObject(users)" :key="key">
           <p>{{ key }}: {{ value }}</p>
         </AFlex>
       </ACard>
     </AModal>
   </AFlex>
+
   <ATable
     size="small"
     rowKey="id"
     :dataSource="filteredData"
-    :columns="columns"
+    :columns="visibleColumns"
     @resizeColumn="handleResizeColumn"
     :loading="loading"
     :error="error"
     :scroll="{ x: 'max-content' }"
+    :show-sorter-tooltip="false"
     class="table"
   >
     <template #headerCell="{ column }">
       <div
-        draggable="true"
+        v-if="editMode"
         class="table-header"
+        draggable="true"
         @dragstart="onDragStart(column)"
         @dragover.prevent
         @drop="onDropList(column)"
       >
-        {{ column.title }}
-        <ACheckbox v-model:checked="column.visible" @click.stop></ACheckbox>
+        <AFlex class="table-header-cell">
+          <ACheckbox v-model:checked="column.visible" @click.stop></ACheckbox>
+
+          <AInput
+            v-model:value="column.title"
+            placeholder="Title"
+            :style="{ minWidth: '120px' }"
+          ></AInput>
+
+          <AButton @click="addCol(column)" size="small" class="table-button">
+            <PlusOutlined />
+          </AButton>
+          <AButton
+            @click="deleteCol(column.key)"
+            size="small"
+            class="table-button"
+          >
+            <DeleteOutlined />
+          </AButton>
+        </AFlex>
       </div>
+      <AFlex v-else>
+        {{ column.title }}
+      </AFlex>
     </template>
+
     <template #bodyCell="{ column, record }">
-      <div :class="{ disabled: column.visible === false }">
+      <AFlex :class="{ disabled: !column.visible }">
         <template v-if="column.key === 'image'">
           <img
             :src="record.image"
@@ -98,6 +131,43 @@
             alt="avatar"
           />
         </template>
+
+        <template v-else-if="editMode && column.key === 'id'">
+          <AFlex class="first-col">
+            <AInput v-model:value="record[column.key]"></AInput>
+            <AButton @click="addRow(record)" size="small" class="table-button">
+              <PlusOutlined />
+            </AButton>
+            <AButton
+              @click="deleteRow(record.id)"
+              size="small"
+              class="table-button"
+            >
+              <DeleteOutlined />
+            </AButton>
+          </AFlex>
+        </template>
+
+        <template v-else-if="editMode && column.key === 'birthDate'">
+          <ADatePicker
+            v-model:value="record[column.key]"
+            format="YYYY-M-D"
+            valueFormat="YYYY-M-D"
+            style="width: 100%"
+          />
+        </template>
+
+        <template v-else-if="editMode && column.key === 'gender'">
+          <ASelect v-model:value="record[column.key]" style="width: 100%">
+            <ASelectOption value="male">male</ASelectOption>
+            <ASelectOption value="female">female</ASelectOption>
+          </ASelect>
+        </template>
+
+        <template v-else-if="editMode">
+          <AInput v-model:value="record[column.key]"></AInput>
+        </template>
+
         <template v-else-if="column.key === 'role'">
           <span>
             <ATag
@@ -108,17 +178,23 @@
             </ATag>
           </span>
         </template>
+
         <template v-else>
           {{ record[column.key] }}
         </template>
-      </div>
+      </AFlex>
     </template>
   </ATable>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch, computed } from "vue";
-import { CloseOutlined } from "@ant-design/icons-vue";
+import {
+  CloseOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+} from "@ant-design/icons-vue";
+
 const open = ref(false);
 
 const loading = ref(false);
@@ -127,6 +203,8 @@ const error = ref(null);
 const showFilter = ref(false);
 
 const dataTable = ref([]);
+
+const editMode = ref(false);
 
 const filters = reactive({
   search: "",
@@ -160,8 +238,36 @@ onMounted(() => {
   fetchData();
 });
 
+const flatData = computed(() => {
+  return dataTable.value.map((user) => ({
+    ...user,
+    "hair.color": user.hair?.color,
+    "hair.type": user.hair?.type,
+    "address.address": user.address?.address,
+    "address.city": user.address?.city,
+    "address.state": user.address?.state,
+    "address.postalCode": user.address?.postalCode,
+    "address.country": user.address?.country,
+    "company.name": user.company?.name,
+    "company.department": user.company?.department,
+    "company.title": user.company?.title,
+  }));
+});
+
+const flatObject = (obj) => {
+  function flat(o) {
+    return Object.entries(o).flatMap(([key, val]) => {
+      if (typeof val === "object") return flat(val);
+
+      return [[key, val]];
+    });
+  }
+
+  return Object.fromEntries(flat(obj));
+};
+
 const filteredData = computed(() => {
-  return dataTable.value.filter((user) => {
+  return flatData.value.filter((user) => {
     if (filters.search) {
       const searchValue = filters.search.toLowerCase();
       const userData = JSON.stringify(user).toLowerCase();
@@ -474,6 +580,13 @@ function handleResizeColumn(w, col) {
   col.width = w;
 }
 
+const visibleColumns = computed(() => {
+  if (editMode.value) {
+    return columns.value;
+  }
+  return columns.value.filter((col) => col.visible);
+});
+
 const dragItem = ref(null);
 
 function onDragStart(col: any) {
@@ -499,10 +612,39 @@ function onDropList(targetCol: any) {
   dragItem.value = null;
 }
 
-function openModal() {
-  if (!open.value) {
-    open.value = true;
+function addCol(targetCol: any) {
+  const key = "" + columns.value.length + 1;
+  const newCol = {
+    title: "",
+    dataIndex: key,
+    key: key,
+    resizable: true,
+    width: 80,
+    visible: true,
+    sorter: (a, b) => a[key].localeCompare(b[key]),
+  };
+
+  const index = columns.value.findIndex((col) => col.key === targetCol.key);
+
+  columns.value.splice(index + 1, 0, newCol);
+}
+
+function addRow(targetRow: any) {
+  const index = dataTable.value.findIndex((row) => row.id === targetRow.id);
+
+  for (let i = index + 1; i < dataTable.value.length; i++) {
+    dataTable.value[i].id++;
   }
+
+  dataTable.value.splice(index + 1, 0, { id: targetRow.id + 1 });
+}
+
+function deleteRow(rowId: any) {
+  dataTable.value = dataTable.value.filter((row) => row.id !== rowId);
+}
+
+function deleteCol(colKey: any) {
+  columns.value = columns.value.filter((col) => col.key !== colKey);
 }
 
 watch(
@@ -541,7 +683,8 @@ onMounted(() => {
 }
 
 .head-search-block,
-.head-filter-block {
+.head-filter-block,
+.head-button-block {
   display: flex;
   gap: 1rem;
 }
@@ -553,6 +696,10 @@ onMounted(() => {
 
 :deep(.ant-table) {
   table-layout: fixed;
+}
+
+:deep(.ant-tooltip .ant-tooltip-inner) {
+  display: none;
 }
 
 :deep(.ant-table-tbody > tr > td) {
@@ -591,5 +738,12 @@ onMounted(() => {
 
 .disabled {
   opacity: 0.35;
+}
+
+.table-header-cell,
+.first-col {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 </style>
